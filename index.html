@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cobertura de Estoque — Semina</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Calibri, Arial, sans-serif; background: #f4f4f8; color: #222; }
+
+  .header {
+    background: #3A2060; color: white;
+    padding: 14px 28px; display: flex; align-items: center; gap: 16px;
+  }
+  .header-brand { font-size: 22px; font-weight: 900; letter-spacing: 1px; }
+  .header-accent { width: 3px; height: 36px; background: #DC1080; border-radius: 2px; }
+  .header-title { font-size: 18px; font-weight: 700; }
+  .header-right { margin-left: auto; text-align: right; }
+  .header-sub { font-size: 11px; color: #C8B8E8; }
+  .header-updated { font-size: 10px; color: #9B85C8; margin-top: 2px; }
+
+  .cards { display: flex; gap: 14px; padding: 16px 28px 8px; }
+  .card { flex: 1; border-radius: 8px; padding: 12px 16px; border: 1px solid; }
+  .card-label  { font-size: 11px; font-weight: 600; }
+  .card-number { font-size: 28px; font-weight: 900; line-height: 1.1; }
+  .card-sub    { font-size: 10px; margin-top: 2px; }
+  .card-red    { background:#FEE2E2; border-color:#FECACA; }
+  .card-red    .card-label,.card-red    .card-sub { color:#991B1B; }
+  .card-red    .card-number { color:#B91C1C; }
+  .card-orange { background:#FEF3C7; border-color:#FDE68A; }
+  .card-orange .card-label,.card-orange .card-sub { color:#92400E; }
+  .card-orange .card-number { color:#D97706; }
+  .card-purple { background:#EDE8F8; border-color:#DDD8F0; }
+  .card-purple .card-label,.card-purple .card-sub { color:#4C1D95; }
+  .card-purple .card-number { color:#5A3C96; }
+  .card-gray   { background:#F3F4F6; border-color:#E5E7EB; }
+  .card-gray   .card-label,.card-gray   .card-sub { color:#4B5563; }
+  .card-gray   .card-number { color:#1F2937; }
+
+  .tip { font-size: 11px; color: #6B7280; padding: 4px 28px 10px; }
+  .tip strong { color: #5A3C96; }
+
+  .table-wrap { padding: 0 28px 28px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; background:#fff;
+          border-radius:8px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+  thead tr { background:#3A2060; color:#fff; }
+  thead th { padding:8px 10px; text-align:left; font-size:11px; font-weight:600; white-space:nowrap; }
+  thead th:nth-child(3),thead th:nth-child(4),thead th:nth-child(5) { text-align:right; }
+  tbody tr:nth-child(even) { background:#FAFAFA; }
+  tbody tr:hover { background:#F0EDF8; }
+  tbody td { padding:6px 10px; vertical-align:middle; border-bottom:1px solid #F0EDF8; white-space:nowrap; }
+  tbody td:nth-child(3),tbody td:nth-child(4) { text-align:right; font-variant-numeric:tabular-nums; }
+  tbody td:nth-child(5) { text-align:right; font-weight:700; }
+  tbody td:nth-child(2) { white-space:normal; max-width:340px; }
+
+  .fab-prop { color:#16A34A; font-size:11px; font-weight:600; }
+  .fab-terc { color:#2563EB; font-size:11px; font-weight:600; }
+
+  .status-badge { display:inline-block; padding:2px 10px; border-radius:20px;
+                  font-size:11px; font-weight:700; white-space:nowrap; }
+  .st-baixa { background:#FEE2E2; color:#B91C1C; }
+  .st-ideal { background:#FEF3C7; color:#B45309; }
+  .st-alta  { background:#EDE8F8; color:#5A3C96; }
+
+  .cob-baixa { color:#B91C1C; font-weight:700; }
+  .cob-ideal { color:#B45309; font-weight:700; }
+  .cob-alta  { color:#5A3C96; font-weight:700; }
+
+  .section-divider td {
+    background:#F3F0FA; font-size:10px; font-weight:700; color:#5A3C96;
+    letter-spacing:.5px; text-transform:uppercase;
+    padding:5px 10px; border-top:2px solid #DDD8F0;
+  }
+
+  .editable {
+    background:transparent; border:none; text-align:right;
+    font-family:inherit; font-size:12px; width:90px;
+    padding:2px 4px; border-radius:4px; cursor:text;
+  }
+  .editable:focus { outline:2px solid #7C3AED; background:#F5F3FF; }
+
+  .error-box {
+    margin:20px 28px; padding:16px 20px;
+    background:#FEF2F2; border:1px solid #FECACA;
+    border-radius:8px; color:#991B1B; font-size:13px; line-height:1.6;
+  }
+  .error-box code { background:#FEE2E2; padding:2px 6px; border-radius:4px; font-size:12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-brand">SEMINA</div>
+  <div class="header-accent"></div>
+  <div class="header-title">Cobertura de Estoque — Todos os Produtos</div>
+  <div class="header-right">
+    <div class="header-sub">Estoque atual vs Forecast</div>
+    <div class="header-updated" id="last-updated"></div>
+  </div>
+</div>
+
+<div class="cards">
+  <div class="card card-red">
+    <div class="card-label">SKUs críticos</div>
+    <div class="card-number" id="cnt-baixa">—</div>
+    <div class="card-sub">&lt; 2 meses</div>
+  </div>
+  <div class="card card-orange">
+    <div class="card-label">SKUs em atenção</div>
+    <div class="card-number" id="cnt-ideal">—</div>
+    <div class="card-sub">2–4 meses</div>
+  </div>
+  <div class="card card-purple">
+    <div class="card-label">SKUs em excesso</div>
+    <div class="card-number" id="cnt-alta">—</div>
+    <div class="card-sub">&gt; 4 meses</div>
+  </div>
+  <div class="card card-gray">
+    <div class="card-label">Total SKUs</div>
+    <div class="card-number" id="cnt-total">—</div>
+    <div class="card-sub">monitorados</div>
+  </div>
+</div>
+
+<div class="tip">
+  📂 Dados carregados de <strong>estoque.csv</strong> — para atualizar substitua esse arquivo no repositório GitHub.
+  &nbsp;|&nbsp; ✏️ Edite Estoque ou Forecast na tabela para simular cenários.
+</div>
+
+<div id="content">
+  <div style="padding:40px 28px;color:#6B7280;font-size:13px;">Carregando dados...</div>
+</div>
+
+<script>
+// ─── Fabricação por prefixo de código ────────────────────────────────────────
+function getFab(codigo) {
+  const c = (codigo || '').trim();
+  if (c.startsWith('0072')) return 'Própria';
+  if (c === '0000-028')     return 'Própria'; // Della
+  return 'Terceiros';
+}
+
+// ─── Parse CSV robusto (lida com campos entre aspas e vírgulas) ───────────────
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+
+  function splitLine(line) {
+    const cols = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQ = !inQ; continue; }
+      if (ch === ',' && !inQ) { cols.push(cur); cur = ''; continue; }
+      cur += ch;
+    }
+    cols.push(cur);
+    return cols.map(c => c.trim());
+  }
+
+  const headers = splitLine(lines[0]);
+  // Find column indices dynamically
+  const iCodigo  = headers.findIndex(h => /cod/i.test(h));
+  const iDesc    = headers.findIndex(h => /descri/i.test(h));
+  const iTotal   = headers.findIndex(h => h.toLowerCase() === 'total');
+  const iFc      = headers.findIndex(h => /forecast/i.test(h));
+  const iMeses   = headers.findIndex(h => /mes/i.test(h));
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const cols = splitLine(lines[i]);
+    const codigo = cols[iCodigo] || '';
+    const desc   = cols[iDesc]   || '';
+    const total  = cols[iTotal]  || '';
+    const fc     = cols[iFc]     || '';
+    const meses  = cols[iMeses]  || '';
+    // Skip rows with no description or no valid stock
+    if (!desc) continue;
+    rows.push({ codigo, desc, total, fc, meses });
+  }
+  return rows;
+}
+
+// ─── Conversões numéricas ─────────────────────────────────────────────────────
+function toNum(v) {
+  if (!v || v === '#N/A' || v.trim() === '') return null;
+  return parseFloat(v.replace(/\./g, '').replace(',', '.')) || null;
+}
+
+function calcCob(est, fc) {
+  if (fc === null || fc <= 0 || est === null) return null;
+  return est / fc;
+}
+
+function getStatus(m) {
+  if (m === null) return 'alta';
+  if (m < 2)     return 'baixa';
+  if (m <= 4)    return 'ideal';
+  return 'alta';
+}
+
+function fmtCob(m) {
+  if (m === null) return '— m';
+  return m.toFixed(1).replace('.', ',') + ' m';
+}
+
+function fmtNum(n) {
+  if (n === null) return '—';
+  return Math.round(n).toLocaleString('pt-BR');
+}
+
+function statusLabel(s) {
+  return s === 'baixa' ? 'Baixa Cob.' : s === 'ideal' ? 'Cob. Ideal' : 'Alta Cob.';
+}
+
+// ─── Estado (estoque e forecast editáveis por índice) ────────────────────────
+let state = [];
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function render() {
+  const order = { baixa: 0, ideal: 1, alta: 2 };
+
+  const rows = state.map((r, i) => {
+    const m  = calcCob(r.est, r.fc);
+    const st = getStatus(m);
+    return { i, fab: r.fab, desc: r.desc, est: r.est, fc: r.fc, meses: m, st };
+  }).sort((a, b) => {
+    if (order[a.st] !== order[b.st]) return order[a.st] - order[b.st];
+    if (a.meses === null && b.meses === null) return 0;
+    if (a.meses === null) return 1;
+    if (b.meses === null) return -1;
+    return a.meses - b.meses;
+  });
+
+  document.getElementById('cnt-baixa').textContent = rows.filter(r => r.st === 'baixa').length;
+  document.getElementById('cnt-ideal').textContent = rows.filter(r => r.st === 'ideal').length;
+  document.getElementById('cnt-alta').textContent  = rows.filter(r => r.st === 'alta').length;
+  document.getElementById('cnt-total').textContent = rows.length;
+
+  const sectionLabels = {
+    baixa: '🔴 Baixa Cobertura — menos de 2 meses',
+    ideal: '🟡 Cobertura Ideal — 2 a 4 meses',
+    alta:  '🟣 Alta Cobertura — acima de 4 meses',
+  };
+
+  let html = `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>Fab.</th><th>Descrição (SKU)</th>
+      <th>Estoque</th><th>Forecast</th>
+      <th>Cob.</th><th>Status</th>
+    </tr></thead><tbody>`;
+
+  let lastSt = null;
+  rows.forEach(r => {
+    if (r.st !== lastSt) {
+      html += `<tr class="section-divider"><td colspan="6">${sectionLabels[r.st]}</td></tr>`;
+      lastSt = r.st;
+    }
+    const fc = r.fab === 'Própria' ? 'fab-prop' : 'fab-terc';
+    const estVal = r.est !== null ? r.est : '';
+    const fcVal  = r.fc  !== null ? r.fc  : '';
+    html += `<tr>
+      <td><span class="${fc}">${r.fab}</span></td>
+      <td>${r.desc}</td>
+      <td><input class="editable" type="text" data-idx="${r.i}" data-field="est" value="${estVal}"></td>
+      <td><input class="editable" type="text" data-idx="${r.i}" data-field="fc"  value="${fcVal}"></td>
+      <td class="cob-${r.st}">${fmtCob(r.meses)}</td>
+      <td><span class="status-badge st-${r.st}">${statusLabel(r.st)}</span></td>
+    </tr>`;
+  });
+
+  html += '</tbody></table></div>';
+  document.getElementById('content').innerHTML = html;
+
+  document.querySelectorAll('.editable').forEach(inp => {
+    inp.addEventListener('change', function () {
+      const idx = parseInt(this.dataset.idx);
+      const val = toNum(this.value);
+      if (this.dataset.field === 'est') state[idx].est = val;
+      else                              state[idx].fc  = val;
+      render();
+    });
+  });
+}
+
+// ─── Carregar CSV ──────────────────────────────────────────────────────────────
+fetch('estoque.csv?t=' + Date.now())
+  .then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.text();
+  })
+  .then(text => {
+    const rows = parseCSV(text);
+    if (rows.length === 0) throw new Error('CSV vazio ou sem dados reconhecíveis');
+
+    state = rows.map(r => ({
+      fab:  getFab(r.codigo),
+      desc: r.desc,
+      est:  toNum(r.total),
+      fc:   toNum(r.fc),
+    }));
+
+    document.getElementById('last-updated').textContent =
+      'Atualizado em ' + new Date().toLocaleString('pt-BR');
+
+    render();
+  })
+  .catch(err => {
+    document.getElementById('content').innerHTML = `
+      <div class="error-box">
+        <strong>Não foi possível carregar o arquivo de dados.</strong><br><br>
+        Verifique se o arquivo <code>estoque.csv</code> está na mesma pasta que o <code>index.html</code> no repositório.<br><br>
+        Se estiver testando localmente (arquivo aberto direto no navegador), o Chrome bloqueia leitura de arquivos locais.
+        Suba os dois arquivos para o GitHub Pages e acesse pelo link público.<br><br>
+        <em>Erro: ${err.message}</em>
+      </div>`;
+  });
+</script>
+</body>
+</html>
